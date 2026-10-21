@@ -247,7 +247,7 @@ export default function NoteRunner({ artistName, status, detail, interrupt, wait
   }
 
   return (
-    <section className="card stack runner" aria-labelledby="runner-h">
+    <section id="note-runner" className="card stack runner" aria-labelledby="runner-h">
       <div className="row between">
         <div className="stack-sm" style={{ gap: 2 }}>
           <span className="eyebrow">While you wait</span>
@@ -263,7 +263,7 @@ export default function NoteRunner({ artistName, status, detail, interrupt, wait
       </p>
 
       {!open ? (
-        <div><button className="btn btn-primary" onClick={start}><Icon name="play" size={16} /> Play Note Runner</button></div>
+        <div><button id="note-runner-play" className="btn btn-primary" onClick={start}><Icon name="play" size={16} /> Play Note Runner</button></div>
       ) : (
         <div className="runner-stage" ref={wrapRef}>
           <canvas

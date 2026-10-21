@@ -1,43 +1,38 @@
-// "Verify you're human" at login: a quick check first, and an instrument picture puzzle when the quick check isn't
-// confident or after repeated wrong passwords.
+// Text CAPTCHA at log in and sign up: type the distorted characters. Every attempt gets a fresh code.
 //
-// Prototype only. A check that runs in the browser can be bypassed by anyone who edits the page; a real deployment
-// should use a server-verified service such as Cloudflare Turnstile or hCaptcha, checked again on the server before
-// the password is.
-import { instrumentIds, instruments, type InstrumentId } from './instruments.ts'
+// Prototype only. The code lives in the page, so a script that reads the page can pass it. A real deployment must
+// generate and check the code on the server (or use a server-verified service such as Cloudflare Turnstile or
+// hCaptcha) before it even looks at the password.
 
-export interface Signals {
-  // Milliseconds between the form appearing and the check being ticked.
-  elapsedMs: number
-  pointerMoves: number
-  keyPresses: number
-}
-
-// People take a moment and move a pointer or use the keyboard; scripts tick instantly with no input.
-export const looksHuman = (s: Signals) => s.elapsedMs >= 1200 && (s.pointerMoves >= 3 || s.keyPresses >= 2)
-
-export interface Puzzle {
-  target: InstrumentId
-  tiles: { kind: InstrumentId; rotate: number; scale: number }[]
-}
-
-export const puzzlePrompt = (p: Puzzle) => `Select both ${instruments[p.target].plural}`
-
-// Six tiles: two of the target instrument and four different others, shuffled and slightly varied.
-export function makePuzzle(rand: () => number = Math.random): Puzzle {
-  const target = instrumentIds[Math.floor(rand() * instrumentIds.length)]
-  const others = instrumentIds.filter((i) => i !== target).sort(() => rand() - 0.5).slice(0, 4)
-  const kinds = [target, target, ...others].sort(() => rand() - 0.5)
-  return { target, tiles: kinds.map((kind) => ({ kind, rotate: Math.round((rand() - 0.5) * 30), scale: 0.8 + rand() * 0.25 })) }
-}
-
-export const isSolved = (p: Puzzle, picked: number[]) =>
-  picked.length === 2 && picked.every((i) => p.tiles[i]?.kind === p.target)
-
-// A passed check is good for a couple of minutes, like a real CAPTCHA token.
-export const VERIFIED_FOR_MS = 2 * 60_000
-// After this many wrong passwords, the quick check is no longer enough.
-export const STRICT_AFTER_FAILURES = 2
-// After this many, logging in is paused briefly.
+// No look-alikes: 0/O, 1/I/L and 5/S are left out. Checking ignores case, so case can't trip anyone up either.
+export const ALPHABET = 'ABCDEFGHJKMNPQRTUVWXYZ2346789'
+export const CODE_LENGTH = 6
+// A code that has sat on screen this long is replaced, like a real CAPTCHA.
+export const CODE_TTL_MS = 2 * 60_000
+// After this many wrong passwords, logging in is paused briefly.
 export const LOCK_AFTER_FAILURES = 5
 export const LOCK_MS = 30_000
+
+export function makeCode(rand: () => number = Math.random, length = CODE_LENGTH) {
+  return Array.from({ length }, () => ALPHABET[Math.floor(rand() * ALPHABET.length)]).join('')
+}
+
+// What people actually type: any case, with stray spaces.
+export const normalise = (typed: string) => typed.replace(/\s+/g, '').toUpperCase()
+
+export type CodeCheck = 'ok' | 'wrong' | 'expired'
+
+export function checkCode(code: string, typed: string, issuedAt: number, now: number): CodeCheck {
+  if (now - issuedAt > CODE_TTL_MS) return 'expired'
+  return normalise(typed) === code ? 'ok' : 'wrong'
+}
+
+const phonetic: Record<string, string> = {
+  A: 'alpha', B: 'bravo', C: 'charlie', D: 'delta', E: 'echo', F: 'foxtrot', G: 'golf', H: 'hotel', J: 'juliet',
+  K: 'kilo', M: 'mike', N: 'november', P: 'papa', Q: 'quebec', R: 'romeo', T: 'tango', U: 'uniform', V: 'victor',
+  W: 'whiskey', X: 'x-ray', Y: 'yankee', Z: 'zulu',
+}
+
+// For "Listen": "K for kilo, 7, R for romeo, ..." so similar-sounding letters can't be confused.
+export const spoken = (code: string) =>
+  code.split('').map((c) => (phonetic[c] ? `${c} for ${phonetic[c]}` : c)).join(', ')

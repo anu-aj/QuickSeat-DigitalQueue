@@ -1,10 +1,19 @@
 import { useState, type FormEvent } from 'react'
 import { useStore } from '../store'
 import { isDemo } from '../router'
-import { LOCK_AFTER_FAILURES, LOCK_MS, STRICT_AFTER_FAILURES } from '../human'
+import { LOCK_AFTER_FAILURES, LOCK_MS, type CodeCheck } from '../human'
 import Modal from './Modal'
-import HumanCheck from './HumanCheck'
+import CaptchaField, { useCaptcha, type Captcha } from './Captcha'
 import { onDeviceReset } from '../reset'
+
+// Checked before the password, as a server would: a wrong or stale code never reaches the password check.
+function captchaProblem(captcha: Captcha): string | null {
+  const result: CodeCheck = captcha.check()
+  if (result === 'ok') return null
+  captcha.refresh()
+  captcha.inputRef.current?.focus()
+  return result === 'expired' ? 'That code expired. Type the new one.' : 'The characters didn\'t match. Here\'s a new code to try.'
+}
 
 // Wrong-password count for this browser session, kept outside the form so closing the modal doesn't reset it.
 const attempts = { failures: 0, lockedUntil: 0 }
@@ -28,28 +37,29 @@ function LoginForm() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [human, setHuman] = useState(false)
-  const [resetKey, setResetKey] = useState(0)
+  const captcha = useCaptcha()
   const lockedFor = Math.max(0, Math.ceil((attempts.lockedUntil - now) / 1000))
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    if (!human || lockedFor) return
+    if (lockedFor) return
+    const wrongCode = captchaProblem(captcha)
+    if (wrongCode) return setError(wrongCode)
     const err = login(identifier, password)
     if (!err) {
       attempts.failures = 0
       return
     }
+    // Every attempt needs a fresh code, so a passed CAPTCHA can't be reused to guess passwords.
+    captcha.refresh()
     attempts.failures++
     if (attempts.failures >= LOCK_AFTER_FAILURES) {
       attempts.lockedUntil = Date.now() + LOCK_MS
-      attempts.failures = STRICT_AFTER_FAILURES
+      attempts.failures = 0
       setError('Too many tries. For your security, wait 30 seconds before trying again.')
     } else {
-      setError(err)
+      setError(`${err} Type the new code too.`)
     }
-    // After repeated failures, a passed check no longer carries over: verify again, with the puzzle.
-    if (attempts.failures >= STRICT_AFTER_FAILURES) setResetKey((k) => k + 1)
   }
 
   return (
@@ -62,12 +72,11 @@ function LoginForm() {
         Password
         <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </label>
-      <HumanCheck strict={attempts.failures >= STRICT_AFTER_FAILURES} resetKey={resetKey} onChange={setHuman} />
+      <CaptchaField captcha={captcha} id="login-captcha" />
       {error && <p className="error-text" role="alert">{error}</p>}
-      <button className="btn btn-primary btn-block" type="submit" disabled={!identifier || !password || !human || lockedFor > 0}>
+      <button className="btn btn-primary btn-block" type="submit" disabled={!identifier || !password || !captcha.ready || lockedFor > 0}>
         {lockedFor ? `Try again in ${lockedFor}s` : 'Log in'}
       </button>
-      {!human && identifier && password && !lockedFor && <p className="tiny muted" style={{ marginTop: -8 }}>Verify you're human to log in.</p>}
       {/* Demo credentials only in demo mode, never in the form testers see (L4). */}
       {isDemo() && <p className="tiny muted">Demo accounts: customer / customer123 · admin / admin123</p>}
     </form>
@@ -79,7 +88,7 @@ function SignupForm() {
   const [form, setForm] = useState({ name: '', email: '', username: '', password: '' })
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
-  const [human, setHuman] = useState(false)
+  const captcha = useCaptcha()
 
   const errors = {
     name: form.name.trim().length < 2 ? 'Enter your name.' : '',
@@ -110,8 +119,19 @@ function SignupForm() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setTouched({ name: true, email: true, username: true, password: true })
-    if (!human) return setError('Verify you\'re human to create your account.')
-    if (valid) setError(register(form) ?? '')
+    // Fix the form first, so a typed code isn't used up on a submit that was never going to work.
+    if (!valid) return
+    if (!captcha.ready) {
+      captcha.inputRef.current?.focus()
+      return setError('Type the code in the picture to create your account.')
+    }
+    const wrongCode = captchaProblem(captcha)
+    if (wrongCode) return setError(wrongCode)
+    const err = register(form)
+    if (err) {
+      captcha.refresh()
+      setError(`${err} Type the new code too.`)
+    }
   }
 
   return (
@@ -126,7 +146,7 @@ function SignupForm() {
           <span className="tiny muted">Password strength: {strengthLabel[score]}</span>
         </div>
       )}
-      <HumanCheck strict={false} resetKey={0} onChange={(ok) => { setHuman(ok); if (ok) setError('') }} />
+      <CaptchaField captcha={captcha} id="signup-captcha" />
       {error && <p className="error-text" role="alert">{error}</p>}
       <button className="btn btn-primary btn-block" type="submit">Create account</button>
     </form>

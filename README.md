@@ -13,7 +13,7 @@ Requires Node 22.18+ (24 recommended; the tests run TypeScript directly with Nod
 ```bash
 npm install
 npm run dev     # http://localhost:5173
-npm test        # streak, trivia, colour contrast, email safety, queue wording, game, human check, device reset (node:test)
+npm test        # streak, trivia, colour contrast, email safety, queue wording, game, CAPTCHA, device reset (node:test)
 ```
 
 Open http://localhost:5173.
@@ -63,12 +63,14 @@ Sale times are relative to page load, so every sale state is always available:
    **It's your turn**, and check out before the seat hold runs out (8 minutes from when your turn started).
 7. Re-run with the sold-out storyline to see the waitlist outcome.
 
-### Note Runner and human check demo
+### Note Runner and CAPTCHA demo
 
-1. Log out, open **Log in**, type `customer` and a wrong password: Log in stays disabled until you tick **Verify you're
-   human**. Get the password wrong twice and the check comes back as a picture puzzle; solve it, then use `customer123`.
-2. Open BTS → Perth → **Join queue**. Scroll to **Note Runner** and press **Play**: the record starts spinning and
-   the soundtrack plays. Jump with Space, tap or click.
+1. Open **Log in**: under the password is a distorted code to type (**New code** for another, **Listen** to hear it).
+   Type it wrong and you get a fresh code; type it right with a wrong password and you need a fresh code too. Then use
+   `customer` / `customer123` with the code.
+2. Open BTS → Perth → **Join queue** and wait: after about 12 seconds a small "Long wait ahead?" note suggests Note
+   Runner. **Play while I wait** scrolls to the game; press **Play** and the record starts spinning with the
+   soundtrack. Jump with Space, tap or click.
 3. With `?demo=1`, press **Jump to next event**: the game pauses and names the plan change. Reach your turn and the
    game is gone.
 
@@ -140,10 +142,21 @@ server job that runs on the same day-7 / day-1 / hour-before rules, render `buil
   game disappears. Best score is kept in this browser. Rules in `src/game/noteRunner.ts`, tested in `src/game.test.ts`.
 - **Queue note track:** your note hops along a music staff on top of the queue chart, on the chart's own scale, so it
   reaches the front line exactly when you do. A compact version rides in the floating tracker.
-- **Human check at login and sign-up:** "Verify you're human" passes people quickly; scripts, and anyone after two
-  wrong passwords, get an instrument picture puzzle ("Select both drums"). Five wrong passwords pause login for 30
-  seconds. This is a prototype of the step only: a browser-side check can be bypassed, so production should use a
-  server-verified service (Cloudflare Turnstile or hCaptcha). See `src/human.ts`.
+- **Text CAPTCHA at login and sign-up:** type six distorted characters (wavy, mixed fonts, noise and strike lines;
+  no look-alikes like 0/O or 1/I; capitals and spaces don't matter). **New code** draws another; **Listen** reads it
+  aloud phonetically for people who can't see it. It's checked before the password, every attempt needs a fresh code,
+  codes expire after 2 minutes, and five wrong passwords pause login for 30 seconds. This is a prototype of the step:
+  the code lives in the page, so production must generate and check it on a server (or use Cloudflare Turnstile or
+  hCaptcha). See `src/human.ts` and `src/components/Captcha.tsx`.
+- **Note Runner nudge:** after about 12 seconds in a long queue (over 1,500 ahead), one small "Long wait ahead?" note
+  appears under your best chance. **Play while I wait** scrolls to the game and highlights it. It shows once per
+  session, never during a fresh alert or a decision, goes away by itself after 25 seconds, and never appears once
+  you've scrolled to the game.
+- **Installable app (PWA):** add QuickSeat to a phone's home screen and it opens full screen like an app, works
+  offline once visited, and keeps clear of notches. Chrome/Android/desktop show **Install the QuickSeat app** in the
+  footer; on iPhone the footer explains Safari's **Share → Add to Home Screen**. Files: `public/manifest.webmanifest`,
+  `public/sw.js`, `public/icons/`, `src/pwa.ts`. Installing needs the hosted (https) site: it doesn't apply to the
+  double-click file.
 - **Clean device at every login and logout:** all QuickSeat data in the browser (localStorage, sessionStorage and
   Cache Storage, plus everything held in memory: the queue in progress, music, theme) is cleared and reset to the
   demo defaults. Only the account that just logged in is kept, so a new sign-up still works. Other sites' data on the

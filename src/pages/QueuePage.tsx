@@ -13,6 +13,7 @@ import QueueTrack from '../components/QueueTrack'
 import { SectionBadge } from '../components/StatusBadge'
 import StoryTimeline from '../components/StoryTimeline'
 import NoteRunner from '../components/NoteRunner'
+import RunnerNudge from '../components/RunnerNudge'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
 import Countdown, { formatCountdown } from '../components/Countdown'
@@ -20,6 +21,8 @@ import { AlertsControl, LoginGate, ShowHeader, useDocumentTitle } from './shared
 import NotFound from './NotFound'
 
 const STICKY_MS = 8000
+// Only suggest the game when there's a real wait ahead.
+const NUDGE_MIN_AHEAD = 1500
 
 function AlertBox({ alert, sticky }: { alert: QueueAlert; sticky?: boolean }) {
   const cls = alert.tone === 'info' ? 'alert-info' : alert.tone === 'good' ? 'alert-good' : ''
@@ -303,6 +306,9 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
           )}
         </section>
       )}
+
+      {/* One gentle pointer to the game for a long wait; never while an alert is fresh or a decision is open. */}
+      <RunnerNudge show={state.phase === 'waiting' && state.peopleAhead > NUDGE_MIN_AHEAD && pinned === null} />
 
       {!yourTurn && <AlertsControl />}
 

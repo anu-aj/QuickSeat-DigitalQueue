@@ -2,8 +2,8 @@
 // to the next on the same browser. Clears every QuickSeat key in localStorage and sessionStorage, empties the
 // browser's Cache Storage, and tells each module holding data in memory to reset itself.
 //
-// What it can't clear: the browser's own HTTP cache. Only a server can ask for that (the Clear-Site-Data response
-// header), and GitHub Pages can't send custom headers.
+// It keeps the installed app's offline files (see isAppShellCache). What it can't clear: the browser's own HTTP
+// cache. Only a server can ask for that (the Clear-Site-Data response header), and GitHub Pages can't send headers.
 
 export const KEY_PREFIX = 'quickseat:'
 
@@ -19,6 +19,10 @@ export function clearQuickSeatKeys(store: KeyStore) {
   keys.forEach((k) => store.removeItem(k))
   return keys.length
 }
+
+// The installed app's own files (public/sw.js). No personal data, and deleting them would break offline use after
+// every logout, so the reset keeps them.
+export const isAppShellCache = (name: string) => name.startsWith('quickseat-shell')
 
 const listeners = new Set<() => void>()
 
@@ -39,7 +43,7 @@ export function clearDevice() {
     }
   }
   if (typeof caches !== 'undefined') {
-    void caches.keys().then((names) => Promise.all(names.map((n) => caches.delete(n)))).catch(() => {})
+    void caches.keys().then((names) => Promise.all(names.filter((n) => !isAppShellCache(n)).map((n) => caches.delete(n)))).catch(() => {})
   }
   listeners.forEach((fn) => fn())
 }

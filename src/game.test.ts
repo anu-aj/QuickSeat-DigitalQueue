@@ -1,8 +1,7 @@
-// Note Runner rules and the login human check. Run with `npm test`.
+// Note Runner rules. Run with `npm test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { AIRTIME, CEILING, MAX_SPEED, PLAYER_X, jump, newRun, nextGap, score, step } from './game/noteRunner.ts'
-import { isSolved, looksHuman, makePuzzle } from './human.ts'
 import { seeded } from './seats.ts'
 
 const run = (s: ReturnType<typeof newRun>, seconds: number, rand = seeded('t')) => {
@@ -76,25 +75,5 @@ test('speed is capped and every gap between instruments can be cleared', () => {
   for (let i = 0; i < 200; i++) {
     assert.ok(nextGap(rand, null) > AIRTIME)
     assert.ok(nextGap(rand, 0.25) > AIRTIME)
-  }
-})
-
-test('the human check passes people and stops instant, input-free ticks', () => {
-  assert.equal(looksHuman({ elapsedMs: 3000, pointerMoves: 12, keyPresses: 0 }), true)
-  assert.equal(looksHuman({ elapsedMs: 2500, pointerMoves: 0, keyPresses: 6 }), true)
-  assert.equal(looksHuman({ elapsedMs: 80, pointerMoves: 20, keyPresses: 0 }), false)
-  assert.equal(looksHuman({ elapsedMs: 9000, pointerMoves: 0, keyPresses: 0 }), false)
-})
-
-test('the picture puzzle has exactly two targets and only both of them solve it', () => {
-  for (let i = 0; i < 20; i++) {
-    const p = makePuzzle(seeded(`p${i}`))
-    const targets = p.tiles.map((t, j) => (t.kind === p.target ? j : -1)).filter((j) => j >= 0)
-    assert.equal(p.tiles.length, 6)
-    assert.equal(targets.length, 2)
-    assert.equal(isSolved(p, targets), true)
-    const wrong = p.tiles.findIndex((t) => t.kind !== p.target)
-    assert.equal(isSolved(p, [targets[0], wrong]), false)
-    assert.equal(isSolved(p, [targets[0]]), false)
   }
 })

@@ -1,7 +1,7 @@
 // Device reset at login/logout. Run with `npm test`.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clearDevice, clearQuickSeatKeys, onDeviceReset } from './reset.ts'
+import { clearDevice, clearQuickSeatKeys, isAppShellCache, onDeviceReset } from './reset.ts'
 
 function fakeStorage(entries: Record<string, string>) {
   const map = new Map(Object.entries(entries))
@@ -32,6 +32,13 @@ test('leaves data that isn\'t QuickSeat\'s alone', () => {
   const store = fakeStorage({ 'quickseat:v2:plans': '{}', 'other-app:token': 'x', 'quickseatish': 'y' })
   clearQuickSeatKeys(store)
   assert.deepEqual(store.keys(), ['other-app:token', 'quickseatish'])
+})
+
+test('keeps the installed app\'s offline files but clears any other cache', () => {
+  assert.equal(isAppShellCache('quickseat-shell-v1'), true)
+  assert.equal(isAppShellCache('quickseat-shell-fonts'), true)
+  assert.equal(isAppShellCache('quickseat-api-cache'), false)
+  assert.equal(isAppShellCache('workbox-runtime'), false)
 })
 
 test('every registered module is told to reset, and can unsubscribe', () => {

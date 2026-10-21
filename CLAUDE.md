@@ -128,11 +128,20 @@ no squad model, so the app never claims a group was told).
   user's visual while still answering audit Q3 (no second, conflicting progress scale).
 - **Sticky alerts** pin to the top for 8 s after they arrive (`STICKY_MS` in QueuePage), then settle into the page,
   so they don't permanently cover the chart or the game on phones.
-- **Human check** ([src/components/HumanCheck.tsx](src/components/HumanCheck.tsx), rules in [src/human.ts](src/human.ts)):
-  required on log in and sign up. Quick behavioural check, then an instrument picture puzzle when unsure or after
-  `STRICT_AFTER_FAILURES` wrong passwords; `LOCK_AFTER_FAILURES` pauses login. Instrument shapes are shared with the
-  game via [src/instruments.ts](src/instruments.ts). It's a prototype of the step, not real security: production needs a
-  server-verified CAPTCHA (Turnstile / hCaptcha).
+- **Text CAPTCHA** ([src/components/Captcha.tsx](src/components/Captcha.tsx), rules in [src/human.ts](src/human.ts)):
+  shown every time on log in and sign up (it replaced an earlier checkbox + picture puzzle). Checked on submit
+  *before* the password; every attempt, wrong code or wrong password, issues a fresh code; `CODE_TTL_MS` expiry;
+  `LOCK_AFTER_FAILURES` pauses login. "Listen" uses speechSynthesis with phonetic spelling. The code is in page
+  memory, so it's a prototype of the step: production must generate/verify it server-side (or use Turnstile /
+  hCaptcha). Don't add a test backdoor; browser tests read the code through Listen, like a screen-reader user.
+- **Note Runner nudge** ([src/components/RunnerNudge.tsx](src/components/RunnerNudge.tsx)): once per session, after
+  12 s, only when `phase === 'waiting'`, more than `NUDGE_MIN_AHEAD` ahead and no pinned alert. Scrolls to
+  `#note-runner` (with `scroll-margin-top` clearing the floating bar) after it unmounts, so the scroll doesn't overshoot.
+- **PWA** ([public/manifest.webmanifest](public/manifest.webmanifest), [public/sw.js](public/sw.js),
+  [src/pwa.ts](src/pwa.ts)): the service worker registers only in production over http(s). Pages are network-first so
+  deploys show up; the cache is the offline fallback. Cache names start `quickseat-shell` and the device reset keeps
+  them (`isAppShellCache` in reset.ts). Icons in `public/icons/` were rendered from the navbar logo; `public/favicon.svg`
+  is the same logo (it used to be Vite's default).
 
 ## Device reset at login and logout
 
