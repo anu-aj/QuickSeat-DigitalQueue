@@ -26,7 +26,7 @@ export default function QueueChart({ state, bestId }: { state: QueueState; bestI
   const q = state.plan.quantity
 
   return (
-    <section className="card stack" aria-labelledby="qchart-h">
+    <section id="queue-sections" className="card stack" aria-labelledby="qchart-h">
       <div className="stack-sm">
         <h2 id="qchart-h" style={{ fontSize: 20 }}>Your sections along the queue</h2>
         <ul className="qchart-legend" aria-hidden="true">

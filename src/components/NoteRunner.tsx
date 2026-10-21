@@ -52,6 +52,70 @@ function drawNote(c: CanvasRenderingContext2D, x: number, y: number, w: number, 
   c.restore()
 }
 
+const LEGS = 12
+
+// The player: an eighth note with little eyes that blink and legs that run on the ground and tuck up mid-jump.
+// (x, y, w, h) is the same box as drawNote; the body is lifted by the leg length so the feet touch the ground.
+function drawCritter(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, pal: Palette, s: RunnerState, now: number) {
+  const p = s.player
+  const airborne = p.y > 0
+  const tilt = airborne ? -p.vy / 3000 : 0
+  const hx = -w * 0.12
+  const hy = h * 0.3
+  const headBottom = hy + w * 0.26
+
+  c.save()
+  c.translate(x + w / 2, y + h / 2 - LEGS)
+  c.rotate(tilt)
+
+  // Legs first, so the head sits on top of them.
+  c.strokeStyle = pal.accent
+  c.lineWidth = 2.2
+  c.lineCap = 'round'
+  const stride = s.status === 'running' && !airborne ? Math.sin(s.distance / 7) * 4 : 0
+  for (const [side, swing] of [[-1, stride], [1, -stride]] as const) {
+    const hipX = hx + side * 4
+    const footX = airborne ? hipX - 3 : hipX + swing
+    const footY = airborne ? headBottom + LEGS * 0.55 : headBottom + LEGS
+    c.beginPath()
+    c.moveTo(hipX, headBottom - 2)
+    c.lineTo(footX, footY)
+    c.lineTo(footX + 3.5, footY) // a little foot pointing forward
+    c.stroke()
+  }
+
+  // Body: the note head and its stem and flag.
+  c.restore()
+  drawNote(c, x, y - LEGS, w, h, pal.accent, tilt)
+  c.save()
+  c.translate(x + w / 2, y + h / 2 - LEGS)
+  c.rotate(tilt)
+
+  // Eyes looking forward; a quick blink every few seconds.
+  const blink = now % 3200 < 130
+  for (const ex of [hx - w * 0.11, hx + w * 0.12]) {
+    const ey = hy - 1.5
+    if (blink) {
+      c.strokeStyle = pal.paper
+      c.lineWidth = 1.5
+      c.beginPath()
+      c.moveTo(ex - 2.4, ey)
+      c.lineTo(ex + 2.4, ey)
+      c.stroke()
+      continue
+    }
+    c.fillStyle = pal.paper
+    c.beginPath()
+    c.arc(ex, ey, 3, 0, Math.PI * 2)
+    c.fill()
+    c.fillStyle = pal.ink
+    c.beginPath()
+    c.arc(ex + 1, ey + (airborne ? -0.6 : 0.4), 1.5, 0, Math.PI * 2)
+    c.fill()
+  }
+  c.restore()
+}
+
 const paths = new Map<string, Path2D>()
 const path2d = (d: string) => paths.get(d) ?? paths.set(d, new Path2D(d)).get(d)!
 
@@ -96,7 +160,7 @@ function draw(c: CanvasRenderingContext2D, s: RunnerState, w: number, pal: Palet
   }
 
   const p = s.player
-  drawNote(c, PLAYER_X - 4, ground - p.y - PLAYER_H, PLAYER_W + 8, PLAYER_H, pal.accent, p.y > 0 ? -p.vy / 3000 : 0)
+  drawCritter(c, PLAYER_X - 4, ground - p.y - PLAYER_H, PLAYER_W + 8, PLAYER_H, pal, s, performance.now())
 
   c.fillStyle = pal.ink
   c.font = '600 13px Inter, system-ui, sans-serif'

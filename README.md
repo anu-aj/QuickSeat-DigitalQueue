@@ -151,6 +151,9 @@ server job that runs on the same day-7 / day-1 / hour-before rules, render `buil
 - **Queue page layout:** the people-ahead count and your best chance sit side by side, with your music note moving
   along the queue just below; Note Runner comes next so it's in view on arrival, and the artist story is last. The
   "Want an alert if your plan changes?" question is a small pop-up at the top rather than a row in the page.
+- **Queue page touches:** tap the moving note track to jump to "Your sections along the queue" (tickets left and
+  outlook for choices 1 to 3); every click or tap on the queue page pops a little musical note (off with reduced
+  motion); in Note Runner the note has blinking eyes and little legs that run and tuck up mid-jump.
 - **Note Runner nudge:** once the queue has moved about 200 places, a "While you wait, play Note Runner" pointer
   pops up above the game. **Take me there** scrolls to it and highlights it. It shows once per session, never during
   a fresh alert or a decision, goes away by itself after 25 seconds, and not once the game has been started.

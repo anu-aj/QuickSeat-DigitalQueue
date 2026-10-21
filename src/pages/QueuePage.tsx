@@ -14,6 +14,7 @@ import { SectionBadge } from '../components/StatusBadge'
 import StoryTimeline from '../components/StoryTimeline'
 import NoteRunner from '../components/NoteRunner'
 import RunnerNudge from '../components/RunnerNudge'
+import NoteBursts from '../components/NoteBursts'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
 import Countdown, { formatCountdown } from '../components/Countdown'
@@ -253,10 +254,23 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
   }, [floating])
 
   const sectionNames = rankedSections(plan, arena.sections).map((s) => s.name).join(' → ')
+
+  // Tapping the moving note jumps to the detailed view: tickets left and outlook for choices 1, 2 and 3.
+  const showSections = () => {
+    const chart = document.getElementById('queue-sections')
+    if (!chart) return
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+    chart.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' })
+    chart.classList.remove('runner-spotlight')
+    void chart.offsetWidth // restart the highlight if it was shown before
+    chart.classList.add('runner-spotlight')
+    setTimeout(() => chart.classList.remove('runner-spotlight'), 2400)
+  }
   const leaveLink = <button className="link-btn small" onClick={() => setConfirmLeave(true)}>Leave queue</button>
 
   return (
     <div className="container page narrow stack-lg" key={version}>
+      <NoteBursts />
       <ShowHeader
         show={show}
         right={<span className="plan-pill">Your plan: <b>{planPill(plan)}</b><br /><span className="small">{sectionNames}</span></span>}
@@ -304,7 +318,9 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
               <div className="best-chance"><p>{summary.sentence}</p></div>
             )}
           </div>
-          <QueueTrack progress={state.progress} />
+          <button type="button" className="track-link" onClick={showSections} title="See how your sections are doing" aria-label="Your place in the queue. Show how each of your sections is doing.">
+            <QueueTrack progress={state.progress} />
+          </button>
           <div className="row queue-meta">
             <Freshness state={state} now={store.now} />
             <AlertsControl inline />
