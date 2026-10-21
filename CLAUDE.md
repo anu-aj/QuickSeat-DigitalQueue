@@ -76,7 +76,8 @@ React 19 + TypeScript + Vite 8. No router library, no state library, no CSS fram
 1. Keep the stack: React + TS + Vite, plain CSS with custom properties, no new runtime dependencies or state libraries.
 2. `npm run build` and `npm test` must pass after every change.
 3. Exactly three artists: Taylor Swift, BTS, Charlie Puth.
-4. **Never autoplay audio.** Sound only after an explicit press.
+4. **No audio on page load, ever.** Sound starts only from a user's press: the record player, or Play in Note Runner
+   (which starts the record player by design; the fan can switch that off and it's remembered as `gameMusic`).
 5. Product name is QuickSeat. No Ticketmaster / Live Nation names, logos or URLs.
 6. No copyrighted media in the repo (generated posters and tones only; licensed files go in `public/artists/` and `public/audio/`).
 7. Accessibility is required: WCAG 2.2 AA contrast in every theme, full keyboard use, visible focus,
@@ -114,6 +115,24 @@ no squad model, so the app never claims a group was told).
 
 **Keep (the audit says these work):** honest, plain-language copy; the decision pop-up's 60-second default;
 "Your place is random and fair"; the never-a-dead-end sold-out concept; the "How QuickSeat works" strip.
+
+## Added after the audit (Oct 2026)
+
+- **Note Runner** ([src/components/NoteRunner.tsx](src/components/NoteRunner.tsx), rules in
+  [src/game/noteRunner.ts](src/game/noteRunner.ts)): shown only while waiting (waiting room, and queue phases
+  `waiting` / `decision`). Any non-info queue alert pauses it with the reason; it unmounts at your turn. Pressing Play
+  calls `play({ expand: false })` so the record spins without its card covering the game; `currentBeat()` lets
+  obstacles land on the beat. Keep every spawn gap longer than `AIRTIME` (tested) so runs are always clearable.
+- **Queue note track** ([src/components/QueueTrack.tsx](src/components/QueueTrack.tsx)) restored as the queue chart's
+  top edge (`bare` variant), sharing the chart's `FRONT` scale so the note sits over the "You" line. This keeps the
+  user's visual while still answering audit Q3 (no second, conflicting progress scale).
+- **Sticky alerts** pin to the top for 8 s after they arrive (`STICKY_MS` in QueuePage), then settle into the page,
+  so they don't permanently cover the chart or the game on phones.
+- **Human check** ([src/components/HumanCheck.tsx](src/components/HumanCheck.tsx), rules in [src/human.ts](src/human.ts)):
+  required on log in and sign up. Quick behavioural check, then an instrument picture puzzle when unsure or after
+  `STRICT_AFTER_FAILURES` wrong passwords; `LOCK_AFTER_FAILURES` pauses login. Instrument shapes are shared with the
+  game via [src/instruments.ts](src/instruments.ts). It's a prototype of the step, not real security: production needs a
+  server-verified CAPTCHA (Turnstile / hCaptcha).
 
 ## How to work on this
 

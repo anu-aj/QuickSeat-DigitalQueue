@@ -23,10 +23,12 @@ interface Prefs {
   minimized: boolean
   // The fan has answered "Want an alert if your plan changes?", so we don't ask again.
   alertAsked: boolean
+  // Starting Note Runner also starts the record player, unless the fan turns this off.
+  gameMusic: boolean
 }
 
 const PREFS_KEY = 'quickseat:audio-prefs'
-let prefs: Prefs = readStored(PREFS_KEY, { sound: true, notify: false, minimized: false, alertAsked: false })
+let prefs: Prefs = readStored(PREFS_KEY, { sound: true, notify: false, minimized: false, alertAsked: false, gameMusic: true })
 
 let state: MusicState = {
   artistId: null,
@@ -151,13 +153,19 @@ function fadeTo(value: number, seconds: number) {
   master.gain.linearRampToValueAtTime(value, ctx.currentTime + seconds)
 }
 
-export function play() {
+// Only ever called from a click: the record player itself, or pressing Play in Note Runner. Never on page load.
+// `expand: false` keeps the player card closed (the record just spins), so it doesn't cover the game.
+export function play({ expand = true } = {}) {
   if (!state.artistId) return
   stopClip()
   startLoop(state.artistId, state.trackIndex)
   fadeTo(state.volume, 1.5)
-  set({ playing: true, pausedForFocus: false, expanded: true, spotifyOpen: false })
+  set({ playing: true, pausedForFocus: false, expanded: expand, spotifyOpen: false, minimized: expand ? state.minimized : false })
 }
+
+// Seconds per beat of the loop that's playing, so the game can drop instruments on the beat.
+export const currentBeat = () =>
+  state.playing && state.artistId && !clip ? 60 / loops[state.artistId][state.trackIndex % loops[state.artistId].length].bpm : null
 
 export function pause(forFocus = false) {
   if (!state.playing) return

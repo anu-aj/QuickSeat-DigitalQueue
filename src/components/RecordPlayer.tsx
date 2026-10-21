@@ -97,7 +97,7 @@ export default function RecordPlayer() {
 
           <div className="row" style={{ marginTop: 12 }}>
             {music.spotifyOpen ? (
-              <button className="btn btn-ghost btn-sm" onClick={play}>Back to the loop</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => play()}>Back to the loop</button>
             ) : (
               <button className="btn btn-secondary btn-sm" onClick={openSpotify}>Hear {artist.name} on Spotify</button>
             )}

@@ -12,6 +12,8 @@ import { setArtistOverride } from '../theme'
 import Countdown from '../components/Countdown'
 import Icon from '../components/Icon'
 import StoryTimeline from '../components/StoryTimeline'
+import NoteRunner from '../components/NoteRunner'
+import { formatCountdown } from '../components/Countdown'
 import { planPill } from '../plan'
 import { AlertsControl, LoginGate, PlanCard, ShowHeader, useDocumentTitle } from './shared'
 import NotFound from './NotFound'
@@ -119,6 +121,11 @@ function Room({ showId }: { showId: string }) {
 
       {/* Each section with its price, so "is my budget still right?" can be checked before the queue opens (W3). */}
       <PlanCard plan={plan} sections={arena.sections} editHref={href(`/tour/${tour.id}?plan=${show.id}&then=waiting`)} />
+
+      <NoteRunner
+        artistName={artist.name}
+        waitNote="Play until the queue opens: we'll move you straight into the queue the moment it does."
+        status={`Queue opens in ${formatCountdown(Math.max(0, Date.parse(show.saleOpensAt) - store.now))}`} />
 
       <details className="aside-details">
         <summary><Icon name="music" size={16} /> While you wait: the {artist.name} story</summary>

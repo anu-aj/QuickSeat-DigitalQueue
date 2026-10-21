@@ -1,6 +1,7 @@
 import { FRONT, isGone, type QueueState, type SectionState } from '../queue/simulator'
 import { formatNumber, money } from '../seats'
 import { SectionBadge } from './StatusBadge'
+import QueueTrack from './QueueTrack'
 
 const pct = (x: number) => `${(x * 100).toFixed(2)}%`
 
@@ -36,6 +37,12 @@ export default function QueueChart({ state, bestId }: { state: QueueState; bestI
         </ul>
       </div>
 
+      {/* Your note hops along the top edge on the chart's own scale: it reaches the front line exactly when you do. */}
+      <div className="qchart-staffrow" aria-hidden="true">
+        <span className="tiny muted">Your place</span>
+        <div style={{ width: pct(FRONT) }}><QueueTrack progress={state.progress} bare /></div>
+      </div>
+
       <div className="qchart" aria-hidden="true">
         <div>
           {state.sections.map((s, i) => {
@@ -67,7 +74,7 @@ export default function QueueChart({ state, bestId }: { state: QueueState; bestI
             )
           })}
           <div className="qchart-front" style={{ left: pct(FRONT) }} />
-          <div className="qchart-line" style={{ left: pct(you) }}><span>You</span></div>
+          <div className="qchart-line" style={{ left: pct(you) }} />
         </div>
         <div />
         <div className="qchart-axis">

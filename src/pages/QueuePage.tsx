@@ -9,13 +9,17 @@ import { setArtistOverride } from '../theme'
 import { createQueue, getQueue, leaveQueue, peekQueue, summarise, type QueueAlert, type QueueState, type QueueStore, type SectionState, type Storyline } from '../queue/simulator'
 import type { Show, TicketPlan } from '../types'
 import QueueChart from '../components/QueueChart'
+import QueueTrack from '../components/QueueTrack'
 import { SectionBadge } from '../components/StatusBadge'
 import StoryTimeline from '../components/StoryTimeline'
+import NoteRunner from '../components/NoteRunner'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
 import Countdown, { formatCountdown } from '../components/Countdown'
 import { AlertsControl, LoginGate, ShowHeader, useDocumentTitle } from './shared'
 import NotFound from './NotFound'
+
+const STICKY_MS = 8000
 
 function AlertBox({ alert, sticky }: { alert: QueueAlert; sticky?: boolean }) {
   const cls = alert.tone === 'info' ? 'alert-info' : alert.tone === 'good' ? 'alert-good' : ''
@@ -137,6 +141,7 @@ function FloatingTracker({ state, holdSeconds, onSeats }: { state: QueueState; h
       ) : (
         <>
           <span className="qfloat-count"><b className="num">{formatNumber(state.peopleAhead)}</b> ahead</span>
+          <span className="qfloat-track"><QueueTrack progress={state.progress} compact /></span>
           {summary.best && <span className="qfloat-best small"><b>{summary.best.name}</b> <SectionBadge status={summary.status} quantity={state.plan.quantity} /></span>}
           <button className="icon-btn" style={{ width: 36, height: 36 }} aria-label="Back to the top of the queue page" onClick={() => window.scrollTo({ top: 0 })}>
             <Icon name="up" size={18} />
@@ -172,6 +177,15 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
   const state = useSyncExternalStore(queue.subscribe, queue.getState)
   const summary = summarise(state)
   const latest = state.alerts[0]
+  // A new alert is pinned to the top of the screen long enough to be seen, then settles back into the page,
+  // so it doesn't permanently cover the chart or the game on a phone.
+  const [pinned, setPinned] = useState<number | null>(null)
+  useEffect(() => {
+    if (!latest || latest.tone === 'info') return
+    setPinned(latest.id)
+    const t = setTimeout(() => setPinned(null), STICKY_MS)
+    return () => clearTimeout(t)
+  }, [latest?.id]) // eslint-disable-line react-hooks/exhaustive-deps
   const yourTurn = state.phase === 'your-turn'
   const holdSeconds = state.turnAt ? holdSecondsLeft(state.turnAt, store.now) : 0
 
@@ -295,7 +309,7 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
       {floating && <FloatingTracker state={state} holdSeconds={holdSeconds} onSeats={goToSeats} />}
 
       {/* Banner = what changed; the headline above = where you stand now (Q7). */}
-      {!yourTurn && state.phase !== 'assigned' && latest && <AlertBox alert={latest} sticky />}
+      {!yourTurn && state.phase !== 'assigned' && latest && <AlertBox alert={latest} sticky={pinned === latest.id} />}
       {!yourTurn && state.alerts.length > 1 && (
         <details>
           <summary className="small" style={{ cursor: 'pointer' }}>Earlier updates ({state.alerts.length - 1})</summary>
@@ -306,6 +320,16 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
       )}
 
       {!yourTurn && state.phase !== 'assigned' && <QueueChart state={state} bestId={summary.best?.sectionId} />}
+
+      {/* Only while waiting: gone at your turn. Any plan change pauses it, so the alert always wins. */}
+      {(state.phase === 'waiting' || state.phase === 'decision') && (
+        <NoteRunner
+          artistName={artist.name}
+          status={`${formatNumber(state.peopleAhead)} ahead`}
+          detail={summary.best?.name}
+          interrupt={latest && latest.tone !== 'info' ? { key: latest.id, message: `${latest.title}. Check the update above.` } : null}
+        />
+      )}
 
       {!yourTurn && (
         <p className="small muted look-away"><Icon name="eyeOff" size={16} /> You can look away. Your place is kept, and we'll alert you if your plan changes.</p>

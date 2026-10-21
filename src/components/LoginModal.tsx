@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useStore } from '../store'
 import { isDemo } from '../router'
+import { LOCK_AFTER_FAILURES, LOCK_MS, STRICT_AFTER_FAILURES } from '../human'
 import Modal from './Modal'
+import HumanCheck from './HumanCheck'
+
+// Wrong-password count for this browser session, kept outside the form so closing the modal doesn't reset it.
+const attempts = { failures: 0, lockedUntil: 0 }
 
 function passwordScore(pw: string) {
   let score = 0
@@ -14,14 +19,32 @@ function passwordScore(pw: string) {
 const strengthLabel = ['', 'Weak', 'Okay', 'Good', 'Strong']
 
 function LoginForm() {
-  const { login } = useStore()
+  const { login, now } = useStore()
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [human, setHuman] = useState(false)
+  const [resetKey, setResetKey] = useState(0)
+  const lockedFor = Math.max(0, Math.ceil((attempts.lockedUntil - now) / 1000))
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    setError(login(identifier, password) ?? '')
+    if (!human || lockedFor) return
+    const err = login(identifier, password)
+    if (!err) {
+      attempts.failures = 0
+      return
+    }
+    attempts.failures++
+    if (attempts.failures >= LOCK_AFTER_FAILURES) {
+      attempts.lockedUntil = Date.now() + LOCK_MS
+      attempts.failures = STRICT_AFTER_FAILURES
+      setError('Too many tries. For your security, wait 30 seconds before trying again.')
+    } else {
+      setError(err)
+    }
+    // After repeated failures, a passed check no longer carries over: verify again, with the puzzle.
+    if (attempts.failures >= STRICT_AFTER_FAILURES) setResetKey((k) => k + 1)
   }
 
   return (
@@ -34,8 +57,12 @@ function LoginForm() {
         Password
         <input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
       </label>
+      <HumanCheck strict={attempts.failures >= STRICT_AFTER_FAILURES} resetKey={resetKey} onChange={setHuman} />
       {error && <p className="error-text" role="alert">{error}</p>}
-      <button className="btn btn-primary btn-block" type="submit" disabled={!identifier || !password}>Log in</button>
+      <button className="btn btn-primary btn-block" type="submit" disabled={!identifier || !password || !human || lockedFor > 0}>
+        {lockedFor ? `Try again in ${lockedFor}s` : 'Log in'}
+      </button>
+      {!human && identifier && password && !lockedFor && <p className="tiny muted" style={{ marginTop: -8 }}>Verify you're human to log in.</p>}
       {/* Demo credentials only in demo mode, never in the form testers see (L4). */}
       {isDemo() && <p className="tiny muted">Demo accounts: customer / customer123 · admin / admin123</p>}
     </form>
@@ -47,6 +74,7 @@ function SignupForm() {
   const [form, setForm] = useState({ name: '', email: '', username: '', password: '' })
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [error, setError] = useState('')
+  const [human, setHuman] = useState(false)
 
   const errors = {
     name: form.name.trim().length < 2 ? 'Enter your name.' : '',
@@ -77,6 +105,7 @@ function SignupForm() {
   const submit = (e: FormEvent) => {
     e.preventDefault()
     setTouched({ name: true, email: true, username: true, password: true })
+    if (!human) return setError('Verify you\'re human to create your account.')
     if (valid) setError(register(form) ?? '')
   }
 
@@ -92,6 +121,7 @@ function SignupForm() {
           <span className="tiny muted">Password strength: {strengthLabel[score]}</span>
         </div>
       )}
+      <HumanCheck strict={false} resetKey={0} onChange={(ok) => { setHuman(ok); if (ok) setError('') }} />
       {error && <p className="error-text" role="alert">{error}</p>}
       <button className="btn btn-primary btn-block" type="submit">Create account</button>
     </form>

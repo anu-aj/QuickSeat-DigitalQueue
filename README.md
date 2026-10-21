@@ -13,7 +13,7 @@ Requires Node 22.18+ (24 recommended; the tests run TypeScript directly with Nod
 ```bash
 npm install
 npm run dev     # http://localhost:5173
-npm test        # streak rules, trivia bank, colour contrast, email safety, queue wording (node:test)
+npm test        # streak, trivia, colour contrast, email safety, queue wording, game and human check (node:test)
 ```
 
 Open http://localhost:5173.
@@ -58,6 +58,15 @@ Sale times are relative to page load, so every sale state is always available:
 6. Answer the decision pop-up when a section sells out (it compares both options side by side), reach
    **It's your turn**, and check out before the seat hold runs out (8 minutes from when your turn started).
 7. Re-run with the sold-out storyline to see the waitlist outcome.
+
+### Note Runner and human check demo
+
+1. Log out, open **Log in**, type `customer` and a wrong password: Log in stays disabled until you tick **Verify you're
+   human**. Get the password wrong twice and the check comes back as a picture puzzle; solve it, then use `customer123`.
+2. Open BTS → Perth → **Join queue**. Scroll to **Note Runner** and press **Play**: the record starts spinning and
+   the soundtrack plays. Jump with Space, tap or click.
+3. With `?demo=1`, press **Jump to next event**: the game pauses and names the plan change. Reach your turn and the
+   game is gone.
 
 ### Presale streak demo
 
@@ -120,7 +129,18 @@ server job that runs on the same day-7 / day-1 / hour-before rules, render `buil
 - **Waiting room → queue → your turn → outcome**, modelled on the reference screens: people ahead, best-chance sentence,
   one alert at a time, sections-along-the-queue chart, plan table, decision pop-up with a 60s timer, pre-picked best seats,
   checkout timer, success tickets with calendar download, or sold-out waitlist / face-value resale.
-- **Record player:** never autoplays. Tapping it plays a generated mood loop for the artist (original tones, not
+- **Note Runner (while waiting only):** a small endless runner in the waiting room and the queue. Your music note hops
+  over instruments (drums, guitars, trumpets, pianos, metronomes, maracas) and collects bonus notes; tap again in the
+  air for a grace-note hop. Pressing **Play** also starts the record player (toggle: "Play the soundtrack while I play"),
+  and with music on, instruments arrive on the beat. A plan change pauses the game with the reason; at your turn the
+  game disappears. Best score is kept in this browser. Rules in `src/game/noteRunner.ts`, tested in `src/game.test.ts`.
+- **Queue note track:** your note hops along a music staff on top of the queue chart, on the chart's own scale, so it
+  reaches the front line exactly when you do. A compact version rides in the floating tracker.
+- **Human check at login and sign-up:** "Verify you're human" passes people quickly; scripts, and anyone after two
+  wrong passwords, get an instrument picture puzzle ("Select both drums"). Five wrong passwords pause login for 30
+  seconds. This is a prototype of the step only: a browser-side check can be bypassed, so production should use a
+  server-verified service (Cloudflare Turnstile or hCaptcha). See `src/human.ts`.
+- **Record player:** never starts on page load. Tapping it, or pressing Play in Note Runner, plays a generated mood loop for the artist (original tones, not
   recordings), with volume, next, minimise, and a Spotify embed for the real songs. It pauses itself at your turn.
 - **Alerts:** soft chime (Web Audio) and optional browser notifications; the tab title shows your progress.
 - **Themes:** white base, black navbar by default, switchable to the Desert Chic palette (Orange Rust, Honey Ginger,
