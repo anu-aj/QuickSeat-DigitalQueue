@@ -2,6 +2,7 @@
 // so a demo always plays the same storyline as the reference screens.
 import type { Section, TicketPlan } from '../types'
 import { seeded } from '../seats.ts'
+import { onDeviceReset } from '../reset.ts'
 
 export type SectionStatus = 'likely' | 'at-risk' | 'unlikely' | 'sold-out' | 'cant-seat-together'
 export type Phase = 'assigned' | 'waiting' | 'decision' | 'your-turn' | 'done'
@@ -331,6 +332,12 @@ export function getQueue(showId: string, make: () => QueueStore) {
 }
 
 export const peekQueue = (showId: string) => registry.get(showId)
+
+// Device reset (login/logout): every queue in progress is dropped.
+onDeviceReset(() => {
+  registry.forEach((q) => q.dispose())
+  registry.clear()
+})
 
 export function leaveQueue(showId: string) {
   registry.get(showId)?.dispose()

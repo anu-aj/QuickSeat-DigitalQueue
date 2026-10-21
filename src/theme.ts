@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react'
 import type { ArtistId } from './types'
 import { readStored, writeStored } from './storage'
 import { contrast, themes, themeTokens } from './color'
+import { onDeviceReset } from './reset'
 
 export { contrast, themes, themeTokens }
 export type { Theme } from './color'
@@ -52,6 +53,13 @@ export const setArtistOverride = (artistId: ArtistId | null) => {
   const next = artistId ? artistThemes[artistId] : null
   if (next !== state.artistOverride) update({ artistOverride: next })
 }
+
+// Device reset (login/logout): back to the default black theme. The current page's artist colour still applies.
+onDeviceReset(() => {
+  state = { chosen: 'noir', matchArtist: false, artistOverride: state.artistOverride }
+  apply()
+  listeners.forEach((l) => l())
+})
 
 export function useTheme() {
   return useSyncExternalStore(

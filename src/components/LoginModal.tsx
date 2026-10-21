@@ -4,9 +4,14 @@ import { isDemo } from '../router'
 import { LOCK_AFTER_FAILURES, LOCK_MS, STRICT_AFTER_FAILURES } from '../human'
 import Modal from './Modal'
 import HumanCheck from './HumanCheck'
+import { onDeviceReset } from '../reset'
 
 // Wrong-password count for this browser session, kept outside the form so closing the modal doesn't reset it.
 const attempts = { failures: 0, lockedUntil: 0 }
+onDeviceReset(() => {
+  attempts.failures = 0
+  attempts.lockedUntil = 0
+})
 
 function passwordScore(pw: string) {
   let score = 0

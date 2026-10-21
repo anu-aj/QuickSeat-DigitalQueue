@@ -134,6 +134,19 @@ no squad model, so the app never claims a group was told).
   game via [src/instruments.ts](src/instruments.ts). It's a prototype of the step, not real security: production needs a
   server-verified CAPTCHA (Turnstile / hCaptcha).
 
+## Device reset at login and logout
+
+Team decision (Oct 2026): **every login and logout clears all QuickSeat data on the device** and resets to the demo
+defaults ([src/reset.ts](src/reset.ts)). `clearDevice()` removes every `quickseat:` key from localStorage and
+sessionStorage, empties Cache Storage, then calls every `onDeviceReset` listener. Anything new that holds state must
+follow the same rules:
+
+- Store keys under the `quickseat:` prefix (keys outside it survive the reset).
+- If it keeps state in memory (a module variable, React state, a registry), subscribe with `onDeviceReset` and reset
+  itself. Current listeners: store and presale providers, queue registry, audio, theme, login-attempt counter.
+- `finishLogin` in [src/store.tsx](src/store.tsx) clears *before* setting the session and re-adds only the account
+  that just logged in. Don't move the clear after `setSession`, or the new session is wiped.
+
 ## How to work on this
 
 - Before changing a screen, run the demo journey for it (README "Demo script") at **1440px and 390px**. The audit

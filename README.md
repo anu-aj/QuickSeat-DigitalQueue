@@ -13,7 +13,7 @@ Requires Node 22.18+ (24 recommended; the tests run TypeScript directly with Nod
 ```bash
 npm install
 npm run dev     # http://localhost:5173
-npm test        # streak, trivia, colour contrast, email safety, queue wording, game and human check (node:test)
+npm test        # streak, trivia, colour contrast, email safety, queue wording, game, human check, device reset (node:test)
 ```
 
 Open http://localhost:5173.
@@ -33,6 +33,10 @@ GitHub Pages (`.github/workflows/deploy.yml`).
 | Admin    | admin    | admin123    |
 
 ## Demo script
+
+> **Every login and every logout clears all QuickSeat data in this browser** (tickets, plans, waitlists, streak
+> progress, inbox, accounts created with Sign up, theme, preferences and best game score) and starts again from the
+> demo defaults. So book and check out within one session, and expect a fresh start each time you log in.
 
 Sale times are relative to page load, so every sale state is always available:
 
@@ -140,6 +144,11 @@ server job that runs on the same day-7 / day-1 / hour-before rules, render `buil
   wrong passwords, get an instrument picture puzzle ("Select both drums"). Five wrong passwords pause login for 30
   seconds. This is a prototype of the step only: a browser-side check can be bypassed, so production should use a
   server-verified service (Cloudflare Turnstile or hCaptcha). See `src/human.ts`.
+- **Clean device at every login and logout:** all QuickSeat data in the browser (localStorage, sessionStorage and
+  Cache Storage, plus everything held in memory: the queue in progress, music, theme) is cleared and reset to the
+  demo defaults. Only the account that just logged in is kept, so a new sign-up still works. Other sites' data on the
+  same origin is untouched. The browser's own HTTP cache can't be cleared from page code (it needs a server sending
+  `Clear-Site-Data`), so it isn't. See `src/reset.ts`, tested in `src/reset.test.ts`.
 - **Record player:** never starts on page load. Tapping it, or pressing Play in Note Runner, plays a generated mood loop for the artist (original tones, not
   recordings), with volume, next, minimise, and a Spotify embed for the real songs. It pauses itself at your turn.
 - **Alerts:** soft chime (Web Audio) and optional browser notifications; the tab title shows your progress.

@@ -6,6 +6,7 @@ import { showPath } from './sale'
 import { useStore } from './store'
 import { seedShows, seedTours } from './data'
 import { STORAGE_PREFIX as P, readStored, usePersistentState } from './storage'
+import { onDeviceReset } from './reset'
 import { triviaBank } from './trivia'
 import {
   PRESALE_WINDOW_DAYS, dayIndexFor, daysUntilSale, deriveDayStates, msLeft, pickQuestion, scoreAnswer,
@@ -136,6 +137,22 @@ export function PresaleProvider({ children }: { children: ReactNode }) {
   const [nudgeFor, setNudgeFor] = useState<string | null>(null)
   const nudgeRef = useRef(nudgeFor)
   nudgeRef.current = nudgeFor
+
+  // Device reset (login/logout): back to the demo seed (the demo customer's registration and streak history).
+  useEffect(
+    () =>
+      onDeviceReset(() => {
+        setRegistrations(initialRegistrations())
+        setStreaks(initialStreaks())
+        setDemoDaysUntil(null)
+        setEmails([])
+        setPreRegisterFor(null)
+        setTriviaFor(null)
+        setTriviaAuto(null)
+        setNudgeFor(null)
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  )
 
   // The old reminder flags have been migrated into registrations.
   useEffect(() => {

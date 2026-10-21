@@ -3,6 +3,7 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import type { ArtistId } from './types'
 import { readStored, writeStored } from './storage'
+import { onDeviceReset } from './reset'
 
 interface MusicState {
   artistId: ArtistId | null
@@ -28,7 +29,8 @@ interface Prefs {
 }
 
 const PREFS_KEY = 'quickseat:audio-prefs'
-let prefs: Prefs = readStored(PREFS_KEY, { sound: true, notify: false, minimized: false, alertAsked: false, gameMusic: true })
+const DEFAULT_PREFS: Prefs = { sound: true, notify: false, minimized: false, alertAsked: false, gameMusic: true }
+let prefs: Prefs = readStored(PREFS_KEY, DEFAULT_PREFS)
 
 let state: MusicState = {
   artistId: null,
@@ -285,3 +287,10 @@ export function useRecordPlayerHost(artistId: ArtistId | null, mode: 'show' | 'f
 }
 
 export const getPrefs = () => prefs
+
+// Device reset (login/logout): stop the music and forget every audio and alert preference.
+onDeviceReset(() => {
+  pause()
+  prefs = { ...DEFAULT_PREFS }
+  set({ trackIndex: 0, volume: 0.4, expanded: false, minimized: false, spotifyOpen: false })
+})

@@ -3,6 +3,8 @@ import type { Arena, Artist, Booking, SaleStatus, Show, TicketPlan, Tour, User, 
 import { arenas, artists, seedShows, seedTours, seedUsers } from './data'
 import { STORAGE_PREFIX as P, usePersistentState } from './storage'
 import { getShowStatus } from './sale'
+import { clearDevice, onDeviceReset } from './reset'
+import { navigate } from './router'
 
 export interface ToastItem {
   id: number
@@ -111,12 +113,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
   const dismissToast = useCallback((id: number) => setToasts((t) => t.filter((x) => x.id !== id)), [])
 
+  // Device reset (login/logout): every account record goes back to the demo defaults, in memory as well as in storage.
+  useEffect(
+    () =>
+      onDeviceReset(() => {
+        setUsers(seedUsers)
+        setSession(null)
+        setBookings([])
+        setWaitlists([])
+        setPlans({})
+        setTourEdits({})
+        setShowEdits({})
+        setAddedShows([])
+        setDeletedShows([])
+        setSearch('')
+        setCity('')
+        setToasts([])
+      }),
+    [], // eslint-disable-line react-hooks/exhaustive-deps
+  )
+
   const finishLogin = useCallback(
     (u: User) => {
-      userRef.current = u
+      // Every login starts from a clean device. Only the account that just logged in is kept, so a brand-new
+      // sign-up still exists afterwards.
+      clearDevice()
+      const isSeed = seedUsers.some((s) => s.username === u.username)
+      const fresh = isSeed ? seedUsers.find((s) => s.username === u.username)! : { ...u, paymentSaved: false }
+      setUsers(isSeed ? seedUsers : [...seedUsers, fresh])
+      userRef.current = fresh
       setSession(u.username)
       setLoginRequest(null)
-      toast(`You're logged in as ${u.name}.`)
+      toast(`You're logged in as ${u.name}. Data from earlier sessions on this device was cleared.`)
       const action = pendingAction.current
       pendingAction.current = null
       action?.()
@@ -168,8 +196,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     login,
     register,
     logout: () => {
-      setSession(null)
-      toast('You\'ve logged out.')
+      clearDevice()
+      userRef.current = null
+      navigate('/')
+      toast('You\'ve logged out. QuickSeat data on this device has been cleared.')
     },
     loginRequest,
     openLogin,
