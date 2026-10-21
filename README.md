@@ -68,8 +68,8 @@ Sale times are relative to page load, so every sale state is always available:
 1. Open **Log in**: under the password is a distorted code to type (**New code** for another, **Listen** to hear it).
    Type it wrong and you get a fresh code; type it right with a wrong password and you need a fresh code too. Then use
    `customer` / `customer123` with the code.
-2. Open BTS → Perth → **Join queue** and wait: after about 12 seconds a small "Long wait ahead?" note suggests Note
-   Runner. **Play while I wait** scrolls to the game; press **Play** and the record starts spinning with the
+2. Open BTS → Perth → **Join queue** and wait: once the queue has moved about 200 places, a pointer suggests Note
+   Runner. **Take me there** scrolls to the game; press **Play** and the record starts spinning with the
    soundtrack. Jump with Space, tap or click.
 3. With `?demo=1`, press **Jump to next event**: the game pauses and names the plan change. Reach your turn and the
    game is gone.
@@ -148,10 +148,12 @@ server job that runs on the same day-7 / day-1 / hour-before rules, render `buil
   codes expire after 2 minutes, and five wrong passwords pause login for 30 seconds. This is a prototype of the step:
   the code lives in the page, so production must generate and check it on a server (or use Cloudflare Turnstile or
   hCaptcha). See `src/human.ts` and `src/components/Captcha.tsx`.
-- **Note Runner nudge:** after about 12 seconds in a long queue (over 1,500 ahead), one small "Long wait ahead?" note
-  appears under your best chance. **Play while I wait** scrolls to the game and highlights it. It shows once per
-  session, never during a fresh alert or a decision, goes away by itself after 25 seconds, and never appears once
-  you've scrolled to the game.
+- **Queue page layout:** the people-ahead count and your best chance sit side by side, with your music note moving
+  along the queue just below; Note Runner comes next so it's in view on arrival, and the artist story is last. The
+  "Want an alert if your plan changes?" question is a small pop-up at the top rather than a row in the page.
+- **Note Runner nudge:** once the queue has moved about 200 places, a "While you wait, play Note Runner" pointer
+  pops up above the game. **Take me there** scrolls to it and highlights it. It shows once per session, never during
+  a fresh alert or a decision, goes away by itself after 25 seconds, and not once the game has been started.
 - **Installable app (PWA):** add QuickSeat to a phone's home screen and it opens full screen like an app, works
   offline once visited, and keeps clear of notches. Chrome/Android/desktop show **Install the QuickSeat app** in the
   footer; on iPhone the footer explains Safari's **Share → Add to Home Screen**. Files: `public/manifest.webmanifest`,

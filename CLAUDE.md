@@ -134,8 +134,12 @@ no squad model, so the app never claims a group was told).
   `LOCK_AFTER_FAILURES` pauses login. "Listen" uses speechSynthesis with phonetic spelling. The code is in page
   memory, so it's a prototype of the step: production must generate/verify it server-side (or use Turnstile /
   hCaptcha). Don't add a test backdoor; browser tests read the code through Listen, like a screen-reader user.
-- **Note Runner nudge** ([src/components/RunnerNudge.tsx](src/components/RunnerNudge.tsx)): once per session, after
-  12 s, only when `phase === 'waiting'`, more than `NUDGE_MIN_AHEAD` ahead and no pinned alert. Scrolls to
+- **Queue page layout** (user's direction, Oct 2026): count + best chance side by side (`.queue-hero`), the note track
+  under them, then Note Runner, chart, and the artist story last. The alerts question is `AlertAsk`, a pop-up at the
+  top; `AlertsControl inline` shows in the status line once answered (the waiting room keeps the card version).
+  Change only what's asked on this page: the other queue features stay.
+- **Note Runner nudge** ([src/components/RunnerNudge.tsx](src/components/RunnerNudge.tsx)): once per session, when
+  the queue has moved `NUDGE_AFTER_MOVED` places, only in `phase === 'waiting'`, no pinned alert, game not started. Scrolls to
   `#note-runner` (with `scroll-margin-top` clearing the floating bar) after it unmounts, so the scroll doesn't overshoot.
 - **PWA** ([public/manifest.webmanifest](public/manifest.webmanifest), [public/sw.js](public/sw.js),
   [src/pwa.ts](src/pwa.ts)): the service worker registers only in production over http(s). Pages are network-first so

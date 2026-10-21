@@ -14,6 +14,8 @@ interface Props {
   detail?: string
   // What happens to the wait while playing; differs between the waiting room and the queue.
   waitNote?: string
+  // Called when the fan first presses Play (the queue page stops suggesting the game).
+  onStart?: () => void
   // When this key changes, something needs the fan (a plan change): the game pauses and says why.
   interrupt?: { key: string | number; message: string } | null
 }
@@ -105,7 +107,7 @@ function draw(c: CanvasRenderingContext2D, s: RunnerState, w: number, pal: Palet
 }
 
 // While you wait: hop your note over instruments. Only on the waiting room and the queue, never at your turn.
-export default function NoteRunner({ artistName, status, detail, interrupt, waitNote = 'Your place in the queue keeps moving while you play, and the game pauses if your plan changes.' }: Props) {
+export default function NoteRunner({ artistName, status, detail, interrupt, onStart, waitNote = 'Your place in the queue keeps moving while you play, and the game pauses if your plan changes.' }: Props) {
   const music = useMusic()
   const prefs = usePrefs()
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -183,6 +185,7 @@ export default function NoteRunner({ artistName, status, detail, interrupt, wait
 
   const start = () => {
     setOpen(true)
+    onStart?.()
     startMusic()
     // Wait a frame for the canvas to mount before sizing it.
     requestAnimationFrame(() => {

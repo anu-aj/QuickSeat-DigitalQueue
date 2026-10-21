@@ -65,12 +65,37 @@ export function PlanCard({ plan, sections, editHref, title = 'Your plan' }: { pl
 
 const notifySupported = () => typeof Notification !== 'undefined'
 
+// Queue page: the same question as a small pop-up at the top of the screen instead of a row in the page.
+export function AlertAsk() {
+  const prefs = usePrefs()
+  const supported = notifySupported()
+  if (prefs.alertAsked) return null
+  const yes = async () => {
+    const granted = supported ? (await Notification.requestPermission()) === 'granted' : false
+    setPrefs({ notify: granted, sound: true, alertAsked: true })
+  }
+  return (
+    <aside className="alert-toast" aria-labelledby="alert-toast-h">
+      <Icon name="bell" size={22} />
+      <div className="alert-toast-text">
+        <strong id="alert-toast-h">Want an alert if your plan changes?</strong>
+        <span className="small muted">We'll play a soft chime{supported ? ' and send a notification, even when you\'re in another tab' : ''}. Then you can look away.</span>
+      </div>
+      <div className="row" style={{ gap: 6 }}>
+        <button className="btn btn-primary btn-sm" onClick={yes}>Yes, alert me</button>
+        <button className="btn btn-ghost btn-sm" onClick={() => setPrefs({ alertAsked: true, notify: false })}>No thanks</button>
+      </div>
+    </aside>
+  )
+}
+
 // Asked once, clearly, when the fan joins: "safe to look away" only works if alerts are on.
-// After that it shrinks to a small "Alerts" control.
-export function AlertsControl() {
+// After that it shrinks to a small "Alerts" control. `inline`: the question is asked by AlertAsk instead.
+export function AlertsControl({ inline = false }: { inline?: boolean }) {
   const prefs = usePrefs()
   const supported = notifySupported()
 
+  if (!prefs.alertAsked && inline) return null
   if (!prefs.alertAsked) {
     const yes = async () => {
       const granted = supported ? (await Notification.requestPermission()) === 'granted' : false

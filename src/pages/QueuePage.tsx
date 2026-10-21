@@ -17,12 +17,12 @@ import RunnerNudge from '../components/RunnerNudge'
 import Modal from '../components/Modal'
 import Icon from '../components/Icon'
 import Countdown, { formatCountdown } from '../components/Countdown'
-import { AlertsControl, LoginGate, ShowHeader, useDocumentTitle } from './shared'
+import { AlertAsk, AlertsControl, LoginGate, ShowHeader, useDocumentTitle } from './shared'
 import NotFound from './NotFound'
 
 const STICKY_MS = 8000
-// Only suggest the game when there's a real wait ahead.
-const NUDGE_MIN_AHEAD = 1500
+// Suggest the game once the queue has visibly moved (e.g. 8,054 → 7,850), so the wait feels real but is still long.
+const NUDGE_AFTER_MOVED = 200
 
 function AlertBox({ alert, sticky }: { alert: QueueAlert; sticky?: boolean }) {
   const cls = alert.tone === 'info' ? 'alert-info' : alert.tone === 'good' ? 'alert-good' : ''
@@ -174,6 +174,7 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
   const arena = store.arenaOf(show)
   const [version, setVersion] = useState(0)
   const [confirmLeave, setConfirmLeave] = useState(false)
+  const [gameStarted, setGameStarted] = useState(false)
   const demo = isDemo()
 
   const queue = getQueue(show.id, () => createQueue({ plan, sections: arena.sections, showId: show.id, speed: demo ? 10 : 1 }))
@@ -260,6 +261,7 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
         show={show}
         right={<span className="plan-pill">Your plan: <b>{planPill(plan)}</b><br /><span className="small">{sectionNames}</span></span>}
       />
+      {!yourTurn && <AlertAsk />}
 
       {state.phase === 'assigned' ? (
         <section className="card stack queue-assigned" aria-live="polite">
@@ -282,35 +284,34 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
           )}
         </section>
       ) : (
-        <section className="stack" aria-labelledby="q-h" ref={counterRef}>
-          <h1 id="q-h" className="row" style={{ alignItems: 'baseline', gap: 12 }}>
-            <span className="big-count">{formatNumber(state.peopleAhead)}</span>
-            <span style={{ fontSize: 18, fontWeight: 400 }} className="muted">people ahead of you</span>
-          </h1>
+        // First thing on screen: how many are ahead and your best chance, side by side, with your note moving below.
+        <section className="queue-hero" aria-labelledby="q-h" ref={counterRef}>
+          <div className="queue-hero-top">
+            <h1 id="q-h" className="queue-count">
+              <span className="big-count">{formatNumber(state.peopleAhead)}</span>
+              <span className="queue-count-label">people ahead of you</span>
+            </h1>
+            {summary.best ? (
+              <div className="best-chance">
+                <div className="row" style={{ gap: 8 }}>
+                  <span className="small muted">Your best chance</span>
+                  <SectionBadge status={summary.status} quantity={plan.quantity} />
+                </div>
+                <strong className="best-name">{summary.best.name} <span className="small muted">choice {summary.rank}</span></strong>
+                <p className="small">{summary.sentence}</p>
+              </div>
+            ) : (
+              <div className="best-chance"><p>{summary.sentence}</p></div>
+            )}
+          </div>
+          <QueueTrack progress={state.progress} />
           <div className="row queue-meta">
             <Freshness state={state} now={store.now} />
+            <AlertsControl inline />
             {leaveLink}
           </div>
-          {summary.best ? (
-            <div className="best-chance">
-              <div className="row" style={{ gap: 10 }}>
-                <span className="small muted">Your best chance:</span>
-                <strong style={{ fontSize: 20 }}>{summary.best.name}</strong>
-                <span className="small muted">choice {summary.rank}</span>
-                <SectionBadge status={summary.status} quantity={plan.quantity} />
-              </div>
-              <p className="small">{summary.sentence}</p>
-            </div>
-          ) : (
-            <div className="best-chance"><p>{summary.sentence}</p></div>
-          )}
         </section>
       )}
-
-      {/* One gentle pointer to the game for a long wait; never while an alert is fresh or a decision is open. */}
-      <RunnerNudge show={state.phase === 'waiting' && state.peopleAhead > NUDGE_MIN_AHEAD && pinned === null} />
-
-      {!yourTurn && <AlertsControl />}
 
       {floating && <FloatingTracker state={state} holdSeconds={holdSeconds} onSeats={goToSeats} />}
 
@@ -325,24 +326,29 @@ function LiveQueue({ show, plan }: { show: Show; plan: TicketPlan }) {
         </details>
       )}
 
-      {!yourTurn && state.phase !== 'assigned' && <QueueChart state={state} bestId={summary.best?.sectionId} />}
-
-      {/* Only while waiting: gone at your turn. Any plan change pauses it, so the alert always wins. */}
+      {/* Only while waiting: gone at your turn. It sits high enough to peek into view; once the queue has visibly
+          moved, a pointer suggests it. Any plan change pauses it, so the alert always wins. */}
       {(state.phase === 'waiting' || state.phase === 'decision') && (
-        <NoteRunner
-          artistName={artist.name}
-          status={`${formatNumber(state.peopleAhead)} ahead`}
-          detail={summary.best?.name}
-          interrupt={latest && latest.tone !== 'info' ? { key: latest.id, message: `${latest.title}. Check the update above.` } : null}
-        />
+        <>
+          <RunnerNudge show={state.phase === 'waiting' && state.startAhead - state.peopleAhead >= NUDGE_AFTER_MOVED && pinned === null && !gameStarted} />
+          <NoteRunner
+            artistName={artist.name}
+            status={`${formatNumber(state.peopleAhead)} ahead`}
+            detail={summary.best?.name}
+            interrupt={latest && latest.tone !== 'info' ? { key: latest.id, message: `${latest.title}. Check the update above.` } : null}
+            onStart={() => setGameStarted(true)}
+          />
+        </>
       )}
+
+      {!yourTurn && state.phase !== 'assigned' && <QueueChart state={state} bestId={summary.best?.sectionId} />}
 
       {!yourTurn && (
         <p className="small muted look-away"><Icon name="eyeOff" size={16} /> You can look away. Your place is kept, and we'll alert you if your plan changes.</p>
       )}
       {yourTurn && <div>{leaveLink}</div>}
 
-      {/* Engagement lives below the queue, collapsed, so it never outweighs the task (J7, Q8). */}
+      {/* The artist's story comes last, collapsed, so it never outweighs the queue (J7, Q8). */}
       {!yourTurn && (
         <details className="aside-details">
           <summary><Icon name="music" size={16} /> While you wait: the {artist.name} story</summary>
